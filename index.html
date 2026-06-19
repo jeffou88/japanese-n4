@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日文 N4 學習 App</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f3; --surface: #fff; --border: #e2e0da;
+    --primary: #2b5aa0; --accent: #c94a1a;
+    --text: #1a1a1a; --muted: #666;
+    --green: #2e7d5e; --phase1: #4f86c6; --phase2: #5bb37f; --phase3: #e07b39;
+  }
+  body { font-family: 'Segoe UI','Noto Sans TC',sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh; }
+
+  /* SIDEBAR */
+  #sidebar { width:268px; min-width:268px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; height:100vh; position:sticky; top:0; overflow-y:auto; }
+  #sidebar-header { padding:18px 16px 12px; border-bottom:1px solid var(--border); }
+  #sidebar-header h1 { font-size:14px; font-weight:700; color:var(--primary); }
+  #sidebar-header p { font-size:11px; color:var(--muted); margin-top:2px; }
+  #progress-bar-wrap { padding:10px 16px; border-bottom:1px solid var(--border); }
+  #progress-bar-wrap .label { font-size:11px; color:var(--muted); display:flex; justify-content:space-between; margin-bottom:4px; }
+  #progress-bar-bg { background:var(--border); border-radius:99px; height:6px; }
+  #progress-bar-fill { background:var(--primary); height:6px; border-radius:99px; transition:width .4s; width:0%; }
+  #lesson-list { flex:1; padding:6px 0; }
+
+  .phase-label { font-size:10px; font-weight:700; color:#fff; padding:4px 14px; margin:6px 8px 2px; border-radius:4px; }
+  .phase-label.p1 { background:var(--phase1); }
+  .phase-label.p2 { background:var(--phase2); }
+  .phase-label.p3 { background:var(--phase3); }
+
+  .lesson-btn { display:flex; align-items:center; gap:8px; width:100%; padding:7px 14px; background:none; border:none; cursor:pointer; text-align:left; transition:background .15s; border-left:3px solid transparent; }
+  .lesson-btn:hover { background:#f0ede8; }
+  .lesson-btn.active { background:#eef2fa; border-left-color:var(--primary); }
+  .lesson-btn .num { width:24px; height:24px; border-radius:50%; background:var(--border); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--muted); flex-shrink:0; }
+  .lesson-btn.done .num { background:var(--green); color:#fff; }
+  .lesson-btn.active .num { background:var(--primary); color:#fff; }
+  .lesson-btn .info { flex:1; min-width:0; }
+  .lesson-btn .info .t { font-size:11px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lesson-btn .info .s { font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* MAIN */
+  #main { flex:1; padding:26px 30px; overflow-y:auto; max-width:900px; }
+  #lesson-header { margin-bottom:18px; }
+  #lesson-header .phase { font-size:11px; font-weight:600; color:var(--primary); text-transform:uppercase; letter-spacing:.5px; }
+  #lesson-header h2 { font-size:21px; font-weight:700; margin-top:4px; }
+  #lesson-header p { font-size:13px; color:var(--muted); margin-top:4px; }
+
+  /* TABS */
+  #tab-bar { display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+  .tab-btn { padding:7px 16px; font-size:13px; font-weight:600; background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; color:var(--muted); transition:all .15s; margin-bottom:-1px; }
+  .tab-btn:hover { color:var(--text); }
+  .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+
+  /* STUDY */
+  .section-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:16px 0 8px; }
+  .rule-box { background:#eef2fa; border:1px solid #c5d2ed; border-radius:8px; padding:12px 14px; margin-bottom:12px; }
+  .rule-box h4 { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:5px; }
+  .rule-box p, .rule-box li { font-size:12px; color:#444; line-height:1.7; }
+  .rule-box ul { padding-left:16px; }
+
+  .grammar-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:12px; cursor:pointer; transition:border-color .15s, box-shadow .15s; }
+  .grammar-card:hover { border-color:var(--primary); box-shadow:0 2px 10px rgba(0,0,0,.07); }
+  .grammar-card .pattern { font-size:22px; font-weight:700; color:var(--primary); }
+  .grammar-card .meaning { font-size:13px; color:var(--muted); margin-top:3px; }
+  .grammar-card .example { font-size:13px; margin-top:8px; padding:8px 10px; background:#f7f6f3; border-radius:6px; }
+  .grammar-card .example .jp { font-size:14px; }
+  .grammar-card .example .tr { font-size:12px; color:var(--muted); margin-top:3px; }
+
+  .vocab-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:9px; margin-bottom:18px; }
+  .vocab-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:11px 13px; cursor:pointer; transition:border-color .15s, box-shadow .15s; }
+  .vocab-card:hover { border-color:var(--primary); box-shadow:0 2px 8px rgba(0,0,0,.07); }
+  .vocab-card .jp { font-size:19px; font-weight:600; }
+  .vocab-card .reading { font-size:11px; color:var(--primary); margin-top:2px; }
+  .vocab-card .meaning { font-size:12px; color:var(--muted); margin-top:3px; }
+
+  /* FLASHCARD */
+  #flashcard-view { display:flex; flex-direction:column; align-items:center; padding:18px 0; }
+  #fc-progress { font-size:12px; color:var(--muted); margin-bottom:14px; }
+  #fc-card-wrap { perspective:1000px; width:360px; height:230px; cursor:pointer; margin-bottom:18px; }
+  #fc-inner { width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform .4s; }
+  #fc-inner.flipped { transform:rotateY(180deg); }
+  .fc-face { position:absolute; width:100%; height:100%; backface-visibility:hidden; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid var(--border); padding:16px; }
+  #fc-front { background:var(--surface); }
+  #fc-back { background:#eef2fa; transform:rotateY(180deg); }
+  #fc-front .char { font-size:52px; line-height:1; text-align:center; }
+  #fc-front .hint { font-size:12px; color:#bbb; margin-top:10px; }
+  #fc-back .reading { font-size:26px; font-weight:700; color:var(--primary); text-align:center; }
+  #fc-back .meaning { font-size:15px; color:var(--muted); margin-top:6px; text-align:center; }
+  #fc-back .example { font-size:11px; color:#999; margin-top:8px; text-align:center; font-style:italic; padding:0 12px; }
+  #fc-controls { display:flex; gap:10px; align-items:center; }
+  .fc-btn { padding:7px 20px; border-radius:8px; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-size:13px; font-weight:600; transition:all .15s; }
+  .fc-btn:hover { background:#f0ede8; }
+  .fc-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .fc-btn.primary:hover { background:#1e4585; }
+  #fc-shuffle-btn { font-size:11px; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline; margin-top:10px; }
+
+  /* QUIZ */
+  #quiz-view { max-width:580px; }
+  #quiz-progress-wrap { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  #quiz-progress-bar-bg { flex:1; height:6px; background:var(--border); border-radius:99px; }
+  #quiz-progress-bar-fill { height:6px; background:var(--primary); border-radius:99px; transition:width .3s; }
+  #quiz-q-num { font-size:12px; color:var(--muted); white-space:nowrap; }
+  #quiz-question { font-size:14px; font-weight:600; margin-bottom:6px; }
+  #quiz-question-char { font-size:52px; text-align:center; margin:14px 0 18px; line-height:1.1; }
+  .quiz-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
+  .quiz-option { padding:13px 10px; border:2px solid var(--border); border-radius:10px; background:var(--surface); cursor:pointer; font-size:13px; font-weight:600; text-align:center; transition:all .15s; }
+  .quiz-option:hover:not(:disabled) { border-color:var(--primary); background:#eef2fa; }
+  .quiz-option.correct { border-color:var(--green); background:#edf7f3; color:var(--green); }
+  .quiz-option.wrong { border-color:var(--accent); background:#fdf0ec; color:var(--accent); }
+  .quiz-option:disabled { cursor:default; }
+  #quiz-feedback { font-size:13px; min-height:20px; margin-bottom:12px; color:var(--muted); }
+  #quiz-next-btn { padding:9px 26px; background:var(--primary); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
+  #quiz-next-btn:hover { background:#1e4585; }
+  #quiz-result { text-align:center; padding:28px 0; }
+  #quiz-result .score-circle { width:110px; height:110px; border-radius:50%; border:5px solid var(--primary); display:flex; flex-direction:column; align-items:center; justify-content:center; margin:0 auto 18px; }
+  #quiz-result .score-num { font-size:28px; font-weight:700; color:var(--primary); line-height:1; }
+  #quiz-result .score-label { font-size:10px; color:var(--muted); }
+  #quiz-result h3 { font-size:17px; margin-bottom:6px; }
+  #quiz-result p { font-size:13px; color:var(--muted); margin-bottom:18px; }
+  #quiz-result .btn-row { display:flex; gap:10px; justify-content:center; }
+  .done-badge { display:inline-flex; align-items:center; gap:4px; background:#edf7f3; border:1px solid #b2deca; color:var(--green); font-size:11px; font-weight:700; padding:2px 9px; border-radius:99px; margin-left:8px; vertical-align:middle; }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <h1>🇯🇵 日文 N4</h1>
+    <p>前提：已完成 N5 課程</p>
+  </div>
+  <div id="progress-bar-wrap">
+    <div class="label"><span>整體進度</span><span id="progress-text">0 / 50 堂</span></div>
+    <div id="progress-bar-bg"><div id="progress-bar-fill"></div></div>
+  </div>
+  <div id="lesson-list"></div>
+</nav>
+
+<main id="main">
+  <div id="lesson-header">
+    <div class="phase">N4 課程</div>
+    <h2 id="lesson-title">請選擇課程開始學習</h2>
+    <p id="lesson-subtitle">← 從左側選單選擇課程</p>
+  </div>
+  <div id="tab-bar" style="display:none">
+    <button class="tab-btn active" onclick="switchTab('study')">📖 學習</button>
+    <button class="tab-btn" onclick="switchTab('flashcard')">🃏 單字卡</button>
+    <button class="tab-btn" onclick="switchTab('quiz')">✏️ 測驗</button>
+  </div>
+  <div id="study-view"></div>
+  <div id="flashcard-view" style="display:none"></div>
+  <div id="quiz-view" style="display:none"></div>
+</main>
+
+<script>
+// ============================================================
+// SPEECH
+// ============================================================
+let _jaVoice = null, _ttsAudio = null;
+function _loadJaVoice() {
+  const v = speechSynthesis.getVoices();
+  _jaVoice = v.find(x => x.lang === 'ja-JP') || v.find(x => x.lang.startsWith('ja')) || null;
+}
+if (window.speechSynthesis) { speechSynthesis.addEventListener('voiceschanged', _loadJaVoice); _loadJaVoice(); }
+function speak(text) {
+  if (!text) return;
+  if (!_jaVoice) _loadJaVoice();
+  if (_jaVoice) {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP'; u.rate = 0.85; u.voice = _jaVoice;
+    speechSynthesis.speak(u);
+  } else {
+    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+    _ttsAudio = new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=gtx&tl=ja&q=' + encodeURIComponent(text));
+    _ttsAudio.play().catch(() => {});
+  }
+}
+
+// ============================================================
+// LESSONS DATA
+// ============================================================
+const LESSONS = [
+  // ── PHASE 1: Grammar ──────────────────────────────────────
+  {
+    id:1, phase:1, title:'〜てから／〜た後で', subtitle:'動作順序表達',
+    desc:'學習表示動作先後順序的兩個句型，掌握其差異與用法。',
+    type:'grammar',
+    items:[
+      { front:'〜てから', back:'做完…之後', meaning:'做完…之後（強調順序）', example:'宿題をしてから、遊びます。', translation:'做完作業之後再玩。' },
+      { front:'〜た後で', back:'在…之後', meaning:'在…之後（較寬鬆）', example:'食べた後で、歯を磨きます。', translation:'吃飯之後刷牙。' },
+      { front:'〜前に', back:'在…之前', meaning:'在…之前', example:'寝る前に、日記を書きます。', translation:'睡覺之前寫日記。' },
+    ],
+    notes:'てから 強調 A 一定要在 B 之前完成；た後で 則較寬鬆，A 和 B 可以有時間間隔。'
+  },
+  {
+    id:2, phase:1, title:'〜ている（狀態・習慣・職業）', subtitle:'ている 三種用法',
+    desc:'〜ている 不只表示進行中，還可表示結果狀態、習慣及職業。',
+    type:'grammar',
+    items:[
+      { front:'〜ている（進行）', back:'正在做…', meaning:'正在做…（動作進行中）', example:'今、本を読んでいます。', translation:'現在正在看書。' },
+      { front:'〜ている（狀態）', back:'…著（結果狀態）', meaning:'…著（動作結果持續）', example:'窓が開いています。', translation:'窗戶開著。' },
+      { front:'〜ている（習慣）', back:'一直都有在做…', meaning:'習慣性動作', example:'毎朝ジョギングをしています。', translation:'每天早上慢跑。' },
+      { front:'〜ている（職業）', back:'從事…工作', meaning:'表示職業', example:'会社員をしています。', translation:'是上班族。' },
+    ],
+    notes:'同一句型四種語意，需靠上下文判斷。「結婚している」= 已婚狀態（不是「正在結婚」）。'
+  },
+  {
+    id:3, phase:1, title:'〜てみる／〜ておく／〜てしまう', subtitle:'補助動詞三兄弟',
+    desc:'三個重要的補助動詞，在 N4 考試中頻繁出現。',
+    type:'grammar',
+    items:[
+      { front:'〜てみる', back:'試著做…', meaning:'試著做（有嘗試的意味）', example:'日本料理を作ってみます。', translation:'試著做做看日本料理。' },
+      { front:'〜ておく', back:'事先做…/放著', meaning:'事先準備或讓狀態持續', example:'旅行前に予約しておきます。', translation:'旅行前先預約好。' },
+      { front:'〜てしまう', back:'竟然做了…（遺憾）', meaning:'完全做完，帶有遺憾或意外', example:'財布を忘れてしまいました。', translation:'把錢包忘了（很懊悔）。' },
+    ],
+    notes:'口語中：〜てしまう → 〜ちゃう（非正式），〜ておく → 〜とく。'
+  },
+  {
+    id:4, phase:1, title:'授受動詞：〜てあげる／くれる／もらう', subtitle:'給予與接受',
+    desc:'掌握從三個方向描述恩惠行為的動詞用法，是 N4 重要考點。',
+    type:'grammar',
+    items:[
+      { front:'〜てあげる', back:'（我）為別人做…', meaning:'我（或我方）為別人做某事', example:'友達に荷物を持ってあげました。', translation:'幫朋友拿了行李。' },
+      { front:'〜てくれる', back:'別人為（我）做…', meaning:'別人為我（或我方）做某事', example:'先生が教えてくれました。', translation:'老師教了我（謝謝）。' },
+      { front:'〜てもらう', back:'（我）請別人做…', meaning:'我請求別人為我做某事', example:'友達に手伝ってもらいました。', translation:'請朋友幫我（了）。' },
+    ],
+    notes:'方向判斷關鍵：あげる＝往外給，くれる＝往內給（對我），もらう＝我收到（主動請求）。'
+  },
+  {
+    id:5, phase:1, title:'普通形（た形・現在形）', subtitle:'日常會話基礎',
+    desc:'所有詞類的普通形活用，是後續引用節、名詞修飾、〜と思う 的基礎。',
+    type:'grammar',
+    items:[
+      { front:'動詞（現在）', back:'食べる／飲む／する', meaning:'動詞辭書形 = 普通形現在', example:'毎日コーヒーを飲む。', translation:'每天喝咖啡。' },
+      { front:'動詞（過去）', back:'食べた／飲んだ／した', meaning:'動詞た形 = 普通形過去', example:'昨日映画を見た。', translation:'昨天看了電影。' },
+      { front:'い形容詞（普通形）', back:'高い→高かった', meaning:'い形容詞過去：〜い→〜かった', example:'あの映画は面白かった。', translation:'那部電影很有趣。' },
+      { front:'な形容詞（普通形）', back:'きれいだ→きれいだった', meaning:'な形容詞過去：〜だ→〜だった', example:'子供の頃、元気だった。', translation:'小時候很有精神。' },
+    ],
+    notes:'名詞普通形：学生だ（現在）→ 学生だった（過去）→ 学生じゃない（否定）→ 学生じゃなかった（過去否定）。'
+  },
+  {
+    id:6, phase:1, title:'普通形＋名詞修飾（連體節）', subtitle:'用句子修飾名詞',
+    desc:'日文可以用整個句子（普通形）放在名詞前面當形容詞，是非常常用的語法。',
+    type:'grammar',
+    items:[
+      { front:'動詞＋名詞', back:'[動詞普通形]＋名詞', meaning:'用動詞句修飾名詞', example:'昨日読んだ本はおもしろかった。', translation:'昨天讀的書很有趣。' },
+      { front:'い形容詞＋名詞', back:'高い山／安い店', meaning:'い形容詞直接加名詞', example:'安くておいしいレストランを知っていますか。', translation:'你知道便宜又好吃的餐廳嗎？' },
+      { front:'な形容詞＋名詞', back:'有名な＋名詞', meaning:'な形容詞去だ加な', example:'有名な先生に会いました。', translation:'見到了有名的老師。' },
+      { front:'名詞＋の＋名詞', back:'日本の文化', meaning:'名詞修飾名詞用の', example:'友達の妹さんはかわいいです。', translation:'朋友的妹妹很可愛。' },
+    ],
+    notes:'這是日文「定語從句」的概念，相當於英文的關係代名詞 who/which/that，但日文放在名詞前面。'
+  },
+  {
+    id:7, phase:1, title:'〜と思う／〜と言う', subtitle:'引用節',
+    desc:'用普通形＋と引用自己的想法或轉述他人的說話。',
+    type:'grammar',
+    items:[
+      { front:'〜と思います', back:'我認為…', meaning:'表達個人意見或推測', example:'明日は雨だと思います。', translation:'我認為明天會下雨。' },
+      { front:'〜と言いました', back:'（某人）說了…', meaning:'引用他人說的話（直接或間接）', example:'先生は「早く来い」と言いました。', translation:'老師說「快來」。' },
+      { front:'〜と言っていました', back:'（某人）說…', meaning:'轉述他人說的話（間接）', example:'彼は疲れたと言っていました。', translation:'他說他累了。' },
+      { front:'〜と聞きました', back:'聽說…', meaning:'傳達聽來的資訊', example:'来週、試験があると聞きました。', translation:'聽說下週有考試。' },
+    ],
+    notes:'と前面接普通形（動詞辭書形/た形、形容詞普通形、名詞だ）。禮貌體和普通體在と前面都要換成普通形。'
+  },
+  {
+    id:8, phase:1, title:'〜かもしれない／〜でしょう', subtitle:'推測語氣',
+    desc:'表達不確定的推測，兩者確信程度不同。',
+    type:'grammar',
+    items:[
+      { front:'〜かもしれない', back:'也許…/說不定…', meaning:'不確定的可能性（50%以下）', example:'明日、試験があるかもしれない。', translation:'明天也許有考試。' },
+      { front:'〜でしょう', back:'大概是…吧', meaning:'較有把握的推測，或詢問確認', example:'明日は晴れでしょう。', translation:'明天大概是晴天吧。' },
+      { front:'〜だろう', back:'大概…吧（普通形）', meaning:'でしょう 的普通形，男性常用', example:'彼は来ないだろう。', translation:'他大概不會來吧。' },
+    ],
+    notes:'確信度：はずだ（應該）> でしょう（大概）> かもしれない（也許）> らしい（聽說）。'
+  },
+  {
+    id:9, phase:1, title:'〜なければならない／〜なくてもいい', subtitle:'義務與不必要',
+    desc:'表達「必須」與「不必」的兩個重要句型，口語縮略形也要會。',
+    type:'grammar',
+    items:[
+      { front:'〜なければならない', back:'必須…/不得不…', meaning:'義務・必要（較強硬）', example:'毎日薬を飲まなければなりません。', translation:'必須每天吃藥。' },
+      { front:'〜なければいけない', back:'必須…（口語較常用）', meaning:'義務・必要（稍微輕一點）', example:'もう行かなければいけない。', translation:'必須走了。' },
+      { front:'〜なくてもいい', back:'不…也可以', meaning:'表示不必要', example:'明日は来なくてもいいです。', translation:'明天不來也可以。' },
+      { front:'〜なきゃ（口語）', back:'非…不可（縮略）', meaning:'なければ 的口語縮略', example:'宿題やらなきゃ。', translation:'必須做作業（口語）。' },
+    ],
+    notes:'なければ = なきゃ（口語）；なければなりません = なきゃいけない = なきゃ。'
+  },
+  {
+    id:10, phase:1, title:'〜てもいい／〜てはいけない', subtitle:'許可與禁止',
+    desc:'表達「可以做」與「不可以做」的句型。',
+    type:'grammar',
+    items:[
+      { front:'〜てもいいですか', back:'可以…嗎？', meaning:'詢問許可', example:'ここで写真を撮ってもいいですか。', translation:'可以在這裡拍照嗎？' },
+      { front:'〜てもかまいません', back:'…也沒關係', meaning:'給予許可（稍正式）', example:'帰ってもかまいません。', translation:'回去也沒關係。' },
+      { front:'〜てはいけない', back:'不可以…/禁止…', meaning:'禁止', example:'ここで飲食してはいけません。', translation:'這裡禁止飲食。' },
+      { front:'〜てはだめ', back:'不行…（口語）', meaning:'禁止（口語・較隨意）', example:'嘘をついてはだめ。', translation:'不可以說謊。' },
+    ],
+    notes:'許可：てもいい > てもかまわない ｜ 禁止：てはいけない > てはだめ（口語）。'
+  },
+  {
+    id:11, phase:1, title:'〜たことがある／〜たばかり', subtitle:'經驗與剛完成',
+    desc:'表達人生經驗與剛剛做完某事。',
+    type:'grammar',
+    items:[
+      { front:'〜たことがある', back:'曾經…過', meaning:'表達人生經驗', example:'富士山に登ったことがあります。', translation:'曾經爬過富士山。' },
+      { front:'〜たことがない', back:'從來沒有…過', meaning:'否定經驗', example:'日本料理を作ったことがありません。', translation:'從來沒做過日本料理。' },
+      { front:'〜たばかり', back:'剛剛…', meaning:'表示動作剛完成不久', example:'今、食べたばかりです。', translation:'我剛剛才吃。' },
+      { front:'〜たところ', back:'剛…（比 ばかり 更剛）', meaning:'更強調「就在此刻完成」', example:'今、帰ってきたところです。', translation:'我就在剛才回來的。' },
+    ],
+    notes:'たばかり 強調時間短，有時帶「才剛而已」的語氣；たところ 更強調動作完成的當下。'
+  },
+  {
+    id:12, phase:1, title:'〜ことができる／〜ことにする', subtitle:'能力與決定',
+    desc:'用こと將動詞名詞化，再接各種句型。',
+    type:'grammar',
+    items:[
+      { front:'〜ことができる', back:'能夠…/會…', meaning:'表達能力或可能性', example:'ピアノを弾くことができます。', translation:'能夠彈鋼琴。' },
+      { front:'〜ことにする', back:'決定…', meaning:'自己做出決定', example:'毎日運動することにしました。', translation:'決定每天運動。' },
+      { front:'〜ことになる', back:'（結果）變成要…', meaning:'事情自然發展的結果（非自己決定）', example:'来月、転勤することになりました。', translation:'（結果）下個月要調職了。' },
+      { front:'〜ことにしている', back:'一直都…（習慣）', meaning:'自己訂的規則或習慣', example:'毎朝、新聞を読むことにしています。', translation:'我定了每天早上看報紙的習慣。' },
+    ],
+    notes:'ことにする（自己決定）vs ことになる（外部因素決定）；考試常考這個差異。'
+  },
+  {
+    id:13, phase:1, title:'〜ようになる／〜なくなる', subtitle:'變化的表達',
+    desc:'表達能力、習慣或狀態發生了變化。',
+    type:'grammar',
+    items:[
+      { front:'〜ようになる', back:'變得會…/漸漸…', meaning:'能力或習慣的改變（獲得）', example:'日本語が話せるようになりました。', translation:'（我）變得能說日文了。' },
+      { front:'〜なくなる', back:'變得不…了', meaning:'能力或習慣的消失', example:'最近、甘いものが食べられなくなった。', translation:'最近變得不能吃甜食了。' },
+      { front:'〜ようにする', back:'努力做到…', meaning:'刻意努力達成某種狀態', example:'毎日早く起きるようにしています。', translation:'我努力每天早起。' },
+      { front:'〜ていく', back:'（將）越來越…', meaning:'變化往未來方向進行', example:'これからも頑張っていきます。', translation:'今後也會繼續努力下去。' },
+    ],
+    notes:'ようになる 前通常是「可能形動詞」或「狀態性動詞」；ようにする 前通常是「意志動詞」。'
+  },
+  {
+    id:14, phase:1, title:'條件形：〜ば・〜たら・〜と・〜なら', subtitle:'四種假定條件',
+    desc:'日文有四種表達「如果…」的句型，各有微妙差異，是 N4 重要考點。',
+    type:'grammar',
+    items:[
+      { front:'〜ば', back:'如果…的話（純假定）', meaning:'假設條件，結果為一般性', example:'勉強すれば、合格できる。', translation:'如果讀書的話就能合格。' },
+      { front:'〜たら', back:'如果…的話（完成後）', meaning:'前件完成後的後件，可用於過去', example:'雨が降ったら、出かけません。', translation:'如果下雨的話就不出門。' },
+      { front:'〜と', back:'一…就…（自然結果）', meaning:'自然發生的結果，不可用於命令', example:'春になると、桜が咲く。', translation:'一到春天，櫻花就開了。' },
+      { front:'〜なら', back:'如果是…的話（情報前提）', meaning:'以對方說的話或情況為前提', example:'日本に行くなら、新幹線がいい。', translation:'如果要去日本的話，新幹線很方便。' },
+    ],
+    notes:'と 不可接命令・意志（✗ 右に曲がると、止まれ）；なら 後件常是建議；たら 最通用。'
+  },
+  {
+    id:15, phase:1, title:'第一階段中間複習（堂 1–14）', subtitle:'文法小測驗',
+    desc:'複習第 1〜14 堂所有文法句型，找出弱點加強練習。',
+    type:'review', groups:[]
+  },
+  {
+    id:16, phase:1, title:'受身形（被動）', subtitle:'〜られる',
+    desc:'學習被動語態，包含直接受身、間接受身與非情物受身。',
+    type:'grammar',
+    items:[
+      { front:'直接受身', back:'被…', meaning:'直接承受動作的被動', example:'先生に褒められました。', translation:'被老師誇獎了。' },
+      { front:'間接受身', back:'（因某人做了某事而）受到困擾', meaning:'間接受到影響（通常負面）', example:'電車で足を踏まれました。', translation:'在電車上被人踩了腳。' },
+      { front:'非情物受身', back:'…被…', meaning:'以物品為主語的被動（多用於描述、說明）', example:'この橋は100年前に建てられました。', translation:'這座橋建於100年前。' },
+      { front:'受身形活用', back:'グループ1：〜れる　グループ2：〜られる', meaning:'被動形的活用規則', example:'飲む→飲まれる　食べる→食べられる', translation:'喝→被喝　吃→被吃' },
+    ],
+    notes:'間接受身多帶有負面情緒（被打擾、被影響）。「赤ちゃんに泣かれた」= 嬰兒哭（讓我很困擾）。'
+  },
+  {
+    id:17, phase:1, title:'使役形', subtitle:'〜させる',
+    desc:'學習讓・叫・允許別人做某事的使役形用法。',
+    type:'grammar',
+    items:[
+      { front:'使役形（強制）', back:'讓/叫…做…', meaning:'強迫或允許他人做某事', example:'子供に野菜を食べさせます。', translation:'讓孩子吃蔬菜（強迫）。' },
+      { front:'〜させてください', back:'請讓我…', meaning:'請求被允許做某事', example:'トイレを使わせてください。', translation:'請讓我使用廁所。' },
+      { front:'使役受身（〜させられる）', back:'被迫…', meaning:'被強迫做某事（說話者不情願）', example:'残業させられました。', translation:'被迫加班了。' },
+      { front:'使役形活用', back:'グループ1：〜せる　グループ2：〜させる', meaning:'使役形活用規則', example:'飲む→飲ませる　食べる→食べさせる', translation:'喝→讓喝　吃→讓吃' },
+    ],
+    notes:'させてください 是非常禮貌的請求方式，在職場常用。させてもらう = 蒙您允許我…。'
+  },
+  {
+    id:18, phase:1, title:'敬語：尊敬語', subtitle:'いらっしゃる・おっしゃる・なさる',
+    desc:'提高對方（或話題人物）的地位時使用尊敬語，是職場必備。',
+    type:'grammar',
+    items:[
+      { front:'いらっしゃる', back:'います/あります/行く/来る（尊）', meaning:'います・行く・来る 的尊敬語', example:'先生はいらっしゃいますか。', translation:'老師在嗎？' },
+      { front:'おっしゃる', back:'言う の尊敬語', meaning:'說（尊稱對方說話）', example:'何とおっしゃいましたか。', translation:'您說了什麼？' },
+      { front:'なさる', back:'する の尊敬語', meaning:'做（尊稱對方的動作）', example:'何をなさっていますか。', translation:'您在做什麼？' },
+      { front:'ご覧になる', back:'見る の尊敬語', meaning:'看（尊稱）', example:'この資料をご覧になりましたか。', translation:'您看了這份資料嗎？' },
+    ],
+    notes:'尊敬語 = 提高「對方」或「話題人物」的行為；謙讓語 = 降低「自己」的行為來間接抬高對方。'
+  },
+  {
+    id:19, phase:1, title:'敬語：謙讓語', subtitle:'いたす・まいる・おる・いただく',
+    desc:'降低自己的動作以抬高對方地位，商務日語必備。',
+    type:'grammar',
+    items:[
+      { front:'いたす', back:'する の謙讓語', meaning:'做（謙稱自己的動作）', example:'よろしくお願いいたします。', translation:'麻煩您了。' },
+      { front:'まいる', back:'行く/来る の謙讓語', meaning:'去・來（謙稱）', example:'明日、伺ってまいります。', translation:'明天我去拜訪。' },
+      { front:'おる', back:'いる の謙讓語', meaning:'在（謙稱自己或自方）', example:'田中はただ今外出しております。', translation:'田中目前外出中。' },
+      { front:'いただく', back:'もらう の謙讓語', meaning:'收到・接受（謙稱）', example:'お土産をいただきました。', translation:'收到了伴手禮（謙稱）。' },
+    ],
+    notes:'公司打電話：「○○でございます」「少々お待ちください」。自己公司的人對外要用謙讓語。'
+  },
+  {
+    id:20, phase:1, title:'〜そうだ（樣態 vs 伝聞）', subtitle:'兩種そうだ 的差異',
+    desc:'〜そうだ 有兩種完全不同的意思，接法也不同，是考試必考點。',
+    type:'grammar',
+    items:[
+      { front:'〜そうだ（樣態）', back:'看起來…/好像要…', meaning:'根據眼前觀察做出的判斷', example:'空が暗い。雨が降りそうだ。', translation:'天空暗了。好像要下雨。' },
+      { front:'〜そうだ（伝聞）', back:'聽說…', meaning:'傳達聽來的資訊（普通形+そうだ）', example:'明日は雨が降るそうだ。', translation:'聽說明天會下雨。' },
+      { front:'樣態の接法', back:'動詞ます形/形容詞語幹＋そう', meaning:'去掉い接そう；する→しそう', example:'このケーキはおいしそうです。', translation:'這個蛋糕看起來很好吃。' },
+      { front:'伝聞の接法', back:'普通形＋そうだ', meaning:'直接在普通形後加そうだ', example:'彼は来ないそうです。', translation:'聽說他不來。' },
+    ],
+    notes:'樣態そう：いい→よさそう（不是いいそう）；よくない→よくなさそう。這是例外要記。'
+  },
+  {
+    id:21, phase:1, title:'〜らしい／〜ようだ／〜みたいだ', subtitle:'推測・比況・傳聞',
+    desc:'三種推測/比況句型，各有語感上的差異。',
+    type:'grammar',
+    items:[
+      { front:'〜らしい', back:'好像…（有根據的推測）', meaning:'根據某些情報或跡象推測，也可表示典型', example:'彼は病気らしい。', translation:'他好像生病了（有根據）。' },
+      { front:'〜ようだ', back:'好像…/像…一樣', meaning:'根據直接觀察的推測，或比喻', example:'まるで夢のようだ。', translation:'就像夢一樣。' },
+      { front:'〜みたいだ', back:'好像…（口語）', meaning:'ようだ 的口語版', example:'彼女、怒っているみたいだ。', translation:'她好像在生氣（口語）。' },
+      { front:'〜はずだ', back:'理應…/應該…', meaning:'根據道理或規則推測，說話者有把握', example:'彼はもう知っているはずだ。', translation:'他應該已經知道了。' },
+    ],
+    notes:'確信度：はずだ > ようだ/みたいだ > らしい；らしい 也可表示「典型的」（男らしい男 = 很有男子氣概的男人）。'
+  },
+  {
+    id:22, phase:1, title:'〜のに／〜んです（のです）', subtitle:'逆接與說明',
+    desc:'のに 表達「明明…卻」的逆接，んです 用來解釋或詢問理由。',
+    type:'grammar',
+    items:[
+      { front:'〜のに（逆接）', back:'明明…卻…（反預期）', meaning:'前件與後件相反，帶有不滿或驚訝', example:'こんなに勉強したのに、失敗した。', translation:'明明這麼努力念書，卻失敗了。' },
+      { front:'〜のに（目的）', back:'為了…需要…', meaning:'前件為達成後件的必要條件（目的）', example:'この仕事に資格が必要なのに。', translation:'這工作需要執照。' },
+      { front:'〜んです/〜んですか', back:'是因為…/到底是…？', meaning:'說明理由或詢問背後原因', example:'なぜ遅れたんですか。', translation:'你為什麼遲到？（我想知道原因）' },
+      { front:'〜んですが', back:'其實是…，（所以）', meaning:'說明前提再提出請求或說明', example:'道に迷ったんですが、助けてもらえますか。', translation:'其實我迷路了，可以幫我嗎？' },
+    ],
+    notes:'逆接のに 後面常帶有說話者的遺憾、不滿、抱怨語氣；のに 接普通形。'
+  },
+  {
+    id:23, phase:1, title:'〜ために／〜ように', subtitle:'目的的表達',
+    desc:'兩種表達目的的句型，前接動詞類型不同，意思有細微差異。',
+    type:'grammar',
+    items:[
+      { front:'〜ために（目的）', back:'為了…（意志動詞）', meaning:'前接意志動詞，目的明確', example:'日本語を勉強するために、日本に来た。', translation:'為了學日文，來到日本。' },
+      { front:'〜ように（目的）', back:'為了…（狀態/可能）', meaning:'前接狀態動詞或可能形，達成某狀態', example:'忘れないように、メモした。', translation:'為了不忘記，記了筆記。' },
+      { front:'〜ために（理由）', back:'因為…', meaning:'表示原因（常用な形容詞・名詞）', example:'病気のために、休みます。', translation:'因為生病，請假。' },
+      { front:'〜ように言う', back:'叫某人…', meaning:'叫/請某人做某事（間接命令）', example:'先生は早く来るように言いました。', translation:'老師說要早點來。' },
+    ],
+    notes:'ために + 意志動詞（行く・勉強する）；ように + 不可能動詞・可能形・否定形。'
+  },
+  {
+    id:24, phase:1, title:'〜まま／〜っぱなし', subtitle:'狀態持續',
+    desc:'表達某個狀態持續維持的兩種句型。',
+    type:'grammar',
+    items:[
+      { front:'〜たまま', back:'就那樣…/保持…狀態', meaning:'動作完成後狀態一直持續', example:'電気をつけたまま、寝てしまった。', translation:'就那樣開著燈睡著了。' },
+      { front:'〜ないまま', back:'就這樣沒有…', meaning:'某個動作一直沒被做的狀態持續', example:'宿題をしないまま、学校に行った。', translation:'就這樣沒做作業去上學了。' },
+      { front:'〜っぱなし', back:'一直放著/一直開著', meaning:'動作結果持續（較批判性語氣）', example:'ドアを開けっぱなしにしないで。', translation:'不要一直把門開著。' },
+    ],
+    notes:'まま 較中性；っぱなし 帶有「放著不管」的負面語氣。「窓が開いたまま」vs「窓を開けっぱなし」。'
+  },
+  {
+    id:25, phase:1, title:'〜し〜し／〜だけでなく', subtitle:'列舉與並列',
+    desc:'列舉多個理由或事物的句型，日常對話中非常常見。',
+    type:'grammar',
+    items:[
+      { front:'〜し、〜し', back:'又…又…/既…又…', meaning:'列舉多個理由（不完全列舉）', example:'安いし、おいしいし、また来たい。', translation:'又便宜又好吃，想再來。' },
+      { front:'〜だけでなく', back:'不只…還…', meaning:'「不僅…而且…」（完全列舉感）', example:'英語だけでなく、日本語も話せる。', translation:'不只英文，日文也會說。' },
+      { front:'〜ばかりでなく', back:'不只…還…（強調）', meaning:'比だけでなく 語氣更強', example:'頭がいいばかりでなく、優しい。', translation:'不只頭腦好，還很溫柔。' },
+      { front:'〜も〜も', back:'…也…也', meaning:'全部包含的列舉', example:'仕事も趣味も大切だ。', translation:'工作和興趣都很重要。' },
+    ],
+    notes:'〜し 後面可以不說出主要句，光用「〜し、〜し」就能表達「有很多理由」的語感。'
+  },
+  {
+    id:26, phase:1, title:'〜ながら／〜間（あいだ）に', subtitle:'同時進行與期間',
+    desc:'表達兩個動作同時進行，或在某個期間內發生某事。',
+    type:'grammar',
+    items:[
+      { front:'〜ながら', back:'一邊…一邊…', meaning:'兩個動作同時進行（主要動作在後）', example:'音楽を聴きながら、勉強します。', translation:'一邊聽音樂一邊讀書。' },
+      { front:'〜間（あいだ）', back:'在…期間（一直）', meaning:'整個期間內持續的動作', example:'彼女が来る間、待っています。', translation:'在她來之前（這段期間）我一直等。' },
+      { front:'〜間に', back:'趁…的時候', meaning:'在某期間「這一段時間中」發生了某件事', example:'電話をしている間に、誰かが来た。', translation:'在打電話的時候，有人來了。' },
+      { front:'〜うちに', back:'趁…還…的時候', meaning:'強調趁某狀態還持續時做某事', example:'熱いうちに食べてください。', translation:'趁熱吃。' },
+    ],
+    notes:'間（あいだ）強調整段期間持續；間に（あいだに）強調期間「中途」某時間點發生。'
+  },
+  {
+    id:27, phase:1, title:'〜すぎる／〜やすい・にくい', subtitle:'程度與難易',
+    desc:'表達過度與容易/困難的實用句型。',
+    type:'grammar',
+    items:[
+      { front:'〜すぎる', back:'太…/過於…', meaning:'程度超過適當範圍', example:'食べすぎて気持ち悪い。', translation:'吃太多覺得不舒服。' },
+      { front:'〜やすい', back:'容易…/好…', meaning:'動作容易進行（接ます形）', example:'この本は読みやすい。', translation:'這本書容易讀。' },
+      { front:'〜にくい', back:'難以…/不好…', meaning:'動作難以進行（接ます形）', example:'この漢字は書きにくい。', translation:'這個漢字難寫。' },
+      { front:'〜づらい', back:'（做起來）感覺不舒服…', meaning:'にくい 的情感版，有為難感', example:'言いづらいことを言う。', translation:'說出難以啟齒的事。' },
+    ],
+    notes:'すぎる 接ます形去ます（食べすぎる）或形容詞語幹（高すぎる）；やすい/にくい 只接ます形。'
+  },
+  {
+    id:28, phase:1, title:'〜てほしい／〜といい', subtitle:'希望與願望',
+    desc:'表達希望某人做某事，或希望某個情況實現。',
+    type:'grammar',
+    items:[
+      { front:'〜てほしい', back:'希望（你）…', meaning:'希望他人做某事', example:'早く帰ってきてほしい。', translation:'希望你早點回來。' },
+      { front:'〜といい', back:'希望…就好了', meaning:'表達願望（結果不確定）', example:'合格するといいですね。', translation:'希望能通過考試呢。' },
+      { front:'〜ばよかった', back:'要是…就好了（後悔）', meaning:'表達後悔（事實與願望相反）', example:'もっと勉強すればよかった。', translation:'要是多讀一點書就好了。' },
+      { front:'〜ていただけませんか', back:'可以請您…嗎？', meaning:'非常禮貌的請求', example:'窓を開けていただけませんか。', translation:'可以請您打開窗戶嗎？' },
+    ],
+    notes:'てほしい 前用に 表示希望的對象；ばよかった 是反事實假設，後悔語氣很重。'
+  },
+  {
+    id:29, phase:1, title:'〜ても／〜としても', subtitle:'逆接假定',
+    desc:'表達「即使…也…」，不管條件如何後件都成立。',
+    type:'grammar',
+    items:[
+      { front:'〜ても', back:'即使…也…', meaning:'不論如何後件成立（逆接假定）', example:'雨が降っても、行きます。', translation:'即使下雨也會去。' },
+      { front:'〜としても', back:'即使假設…也…', meaning:'假設性的即使（更強的假定）', example:'合格したとしても、油断できない。', translation:'即使假設合格了也不能大意。' },
+      { front:'〜てでも', back:'就算…也要…', meaning:'強調不惜任何代價', example:'どんなことをしてでも、成功したい。', translation:'不惜一切也要成功。' },
+      { front:'〜にしても', back:'不管是…也好', meaning:'不論哪種情況都成立', example:'行くにしても行かないにしても、連絡してください。', translation:'不管去還是不去，都請聯絡。' },
+    ],
+    notes:'ても 是最基本的逆接假定；としても 更強調「即使那樣也…」的假設語氣。'
+  },
+  {
+    id:30, phase:1, title:'第一階段總複習', subtitle:'30 堂文法全整理',
+    desc:'綜合複習第 1〜29 堂所有文法句型，完整測驗！',
+    type:'review', groups:[]
+  },
+
+  // ── PHASE 2: Vocabulary ──────────────────────────────────
+  {
+    id:31, phase:2, title:'N4 單字①：感情・性格', subtitle:'感情動詞・性格形容詞',
+    desc:'描述感情與性格的重要單字，日常對話與閱讀理解必備。',
+    type:'vocab',
+    groups:[
+      { label:'感情', items:[
+        {jp:'怒る',ro:'おこる',meaning:'生氣'},
+        {jp:'悲しい',ro:'かなしい',meaning:'悲傷的'},
+        {jp:'嬉しい',ro:'うれしい',meaning:'高興的'},
+        {jp:'寂しい',ro:'さびしい',meaning:'寂寞的'},
+        {jp:'恥ずかしい',ro:'はずかしい',meaning:'害羞的'},
+        {jp:'心配',ro:'しんぱい',meaning:'擔心'},
+        {jp:'安心',ro:'あんしん',meaning:'放心'},
+        {jp:'驚く',ro:'おどろく',meaning:'驚訝'},
+        {jp:'泣く',ro:'なく',meaning:'哭泣'},
+        {jp:'笑う',ro:'わらう',meaning:'笑'},
+        {jp:'喜ぶ',ro:'よろこぶ',meaning:'高興'},
+        {jp:'怖い',ro:'こわい',meaning:'可怕的'},
+        {jp:'恋しい',ro:'こいしい',meaning:'想念的'},
+        {jp:'幸せ',ro:'しあわせ',meaning:'幸福'},
+      ]},
+      { label:'性格', items:[
+        {jp:'真面目',ro:'まじめ',meaning:'認真'},
+        {jp:'優しい',ro:'やさしい',meaning:'溫柔的'},
+        {jp:'厳しい',ro:'きびしい',meaning:'嚴格的'},
+        {jp:'明るい',ro:'あかるい',meaning:'開朗的'},
+        {jp:'暗い',ro:'くらい',meaning:'陰沉的'},
+        {jp:'親切',ro:'しんせつ',meaning:'親切'},
+        {jp:'正直',ro:'しょうじき',meaning:'誠實'},
+        {jp:'わがまま',ro:'wagamama',meaning:'任性'},
+        {jp:'頑固',ro:'がんこ',meaning:'頑固'},
+        {jp:'素直',ro:'すなお',meaning:'乖巧老實'},
+        {jp:'積極的',ro:'せっきょくてき',meaning:'積極的'},
+        {jp:'消極的',ro:'しょうきょくてき',meaning:'消極的'},
+      ]},
+    ]
+  },
+  {
+    id:32, phase:2, title:'N4 單字②：人際關係・職業', subtitle:'',
+    desc:'描述人際關係與各種職業的重要單字。',
+    type:'vocab',
+    groups:[
+      { label:'人際關係', items:[
+        {jp:'仲間',ro:'なかま',meaning:'同伴/夥伴'},
+        {jp:'恋人',ro:'こいびと',meaning:'戀人'},
+        {jp:'夫婦',ro:'ふうふ',meaning:'夫婦'},
+        {jp:'親戚',ro:'しんせき',meaning:'親戚'},
+        {jp:'上司',ro:'じょうし',meaning:'上司'},
+        {jp:'部下',ro:'ぶか',meaning:'部下'},
+        {jp:'同僚',ro:'どうりょう',meaning:'同事'},
+        {jp:'後輩',ro:'こうはい',meaning:'後輩'},
+        {jp:'先輩',ro:'せんぱい',meaning:'前輩'},
+        {jp:'知人',ro:'ちじん',meaning:'熟人'},
+      ]},
+      { label:'職業', items:[
+        {jp:'医者',ro:'いしゃ',meaning:'醫生'},
+        {jp:'看護師',ro:'かんごし',meaning:'護理師'},
+        {jp:'弁護士',ro:'べんごし',meaning:'律師'},
+        {jp:'警察官',ro:'けいさつかん',meaning:'警察'},
+        {jp:'消防士',ro:'しょうぼうし',meaning:'消防員'},
+        {jp:'教師',ro:'きょうし',meaning:'教師'},
+        {jp:'運転手',ro:'うんてんしゅ',meaning:'司機'},
+        {jp:'店員',ro:'てんいん',meaning:'店員'},
+        {jp:'農家',ro:'のうか',meaning:'農家'},
+        {jp:'研究者',ro:'けんきゅうしゃ',meaning:'研究者'},
+        {jp:'公務員',ro:'こうむいん',meaning:'公務員'},
+      ]},
+    ]
+  },
+  {
+    id:33, phase:2, title:'N4 單字③：自然・社會', subtitle:'',
+    desc:'描述自然現象與社會現象的重要單字。',
+    type:'vocab',
+    groups:[
+      { label:'自然', items:[
+        {jp:'森',ro:'もり',meaning:'森林'},
+        {jp:'川',ro:'かわ',meaning:'河川'},
+        {jp:'砂漠',ro:'さばく',meaning:'沙漠'},
+        {jp:'台風',ro:'たいふう',meaning:'颱風'},
+        {jp:'地震',ro:'じしん',meaning:'地震'},
+        {jp:'津波',ro:'つなみ',meaning:'海嘯'},
+        {jp:'洪水',ro:'こうずい',meaning:'洪水'},
+        {jp:'季節',ro:'きせつ',meaning:'季節'},
+        {jp:'気候',ro:'きこう',meaning:'氣候'},
+        {jp:'大気',ro:'たいき',meaning:'大氣'},
+        {jp:'環境',ro:'かんきょう',meaning:'環境'},
+      ]},
+      { label:'社會', items:[
+        {jp:'政治',ro:'せいじ',meaning:'政治'},
+        {jp:'経済',ro:'けいざい',meaning:'經濟'},
+        {jp:'文化',ro:'ぶんか',meaning:'文化'},
+        {jp:'法律',ro:'ほうりつ',meaning:'法律'},
+        {jp:'選挙',ro:'せんきょ',meaning:'選舉'},
+        {jp:'税金',ro:'ぜいきん',meaning:'稅金'},
+        {jp:'貿易',ro:'ぼうえき',meaning:'貿易'},
+        {jp:'人口',ro:'じんこう',meaning:'人口'},
+        {jp:'平和',ro:'へいわ',meaning:'和平'},
+        {jp:'戦争',ro:'せんそう',meaning:'戰爭'},
+      ]},
+    ]
+  },
+  {
+    id:34, phase:2, title:'N4 單字④：生活・健康・金錢', subtitle:'',
+    desc:'日常生活、健康與金錢相關的重要單字。',
+    type:'vocab',
+    groups:[
+      { label:'生活', items:[
+        {jp:'習慣',ro:'しゅうかん',meaning:'習慣'},
+        {jp:'家賃',ro:'やちん',meaning:'房租'},
+        {jp:'引越し',ro:'ひっこし',meaning:'搬家'},
+        {jp:'掃除',ro:'そうじ',meaning:'打掃'},
+        {jp:'洗濯',ro:'せんたく',meaning:'洗衣服'},
+        {jp:'料理',ro:'りょうり',meaning:'料理'},
+        {jp:'ゴミ',ro:'gomi',meaning:'垃圾'},
+        {jp:'故障',ro:'こしょう',meaning:'故障'},
+        {jp:'修理',ro:'しゅうり',meaning:'修理'},
+      ]},
+      { label:'健康', items:[
+        {jp:'病気',ro:'びょうき',meaning:'生病'},
+        {jp:'薬',ro:'くすり',meaning:'藥'},
+        {jp:'手術',ro:'しゅじゅつ',meaning:'手術'},
+        {jp:'入院',ro:'にゅういん',meaning:'住院'},
+        {jp:'退院',ro:'たいいん',meaning:'出院'},
+        {jp:'注射',ro:'ちゅうしゃ',meaning:'打針'},
+        {jp:'アレルギー',ro:'arerugī',meaning:'過敏'},
+      ]},
+      { label:'金錢', items:[
+        {jp:'給料',ro:'きゅうりょう',meaning:'薪水'},
+        {jp:'値段',ro:'ねだん',meaning:'價格'},
+        {jp:'割引',ro:'わりびき',meaning:'折扣'},
+        {jp:'貯金',ro:'ちょきん',meaning:'存款'},
+        {jp:'借金',ro:'しゃっきん',meaning:'借款'},
+        {jp:'預金',ro:'よきん',meaning:'存款（銀行）'},
+        {jp:'請求書',ro:'せいきゅうしょ',meaning:'帳單'},
+      ]},
+    ]
+  },
+  {
+    id:35, phase:2, title:'N4 漢字①（1–100）', subtitle:'常用漢字前100',
+    desc:'N4 必考漢字前 100 個，含音讀・訓讀・常用詞。',
+    type:'vocab',
+    groups:[
+      { label:'建物・場所', items:[
+        {jp:'館',ro:'かん（図書館・美術館）',meaning:'館/館舍'},
+        {jp:'院',ro:'いん（病院・大学院）',meaning:'院'},
+        {jp:'堂',ro:'どう（食堂・講堂）',meaning:'堂'},
+        {jp:'橋',ro:'はし・きょう（橋・陸橋）',meaning:'橋'},
+        {jp:'港',ro:'みなと（港）',meaning:'港口'},
+        {jp:'道',ro:'みち・どう（道路・鉄道）',meaning:'道路'},
+        {jp:'庭',ro:'にわ・てい（庭・庭園）',meaning:'庭院'},
+        {jp:'壁',ro:'かべ（壁）',meaning:'牆壁'},
+        {jp:'屋根',ro:'やね（屋根）',meaning:'屋頂'},
+      ]},
+      { label:'自然', items:[
+        {jp:'林',ro:'はやし（林）',meaning:'樹林'},
+        {jp:'池',ro:'いけ（池）',meaning:'池塘'},
+        {jp:'波',ro:'なみ（波）',meaning:'浪'},
+        {jp:'雲',ro:'くも（雲）',meaning:'雲'},
+        {jp:'雪',ro:'ゆき（雪）',meaning:'雪'},
+        {jp:'光',ro:'ひかり・こう（光・光線）',meaning:'光'},
+        {jp:'熱',ro:'ねつ（熱・発熱）',meaning:'熱'},
+        {jp:'砂',ro:'すな（砂）',meaning:'沙'},
+        {jp:'岩',ro:'いわ（岩）',meaning:'岩石'},
+      ]},
+      { label:'身體・人', items:[
+        {jp:'顔',ro:'かお（顔）',meaning:'臉'},
+        {jp:'声',ro:'こえ（声）',meaning:'聲音'},
+        {jp:'息',ro:'いき（息）',meaning:'呼吸'},
+        {jp:'血',ro:'ち（血）',meaning:'血'},
+        {jp:'歯',ro:'は（歯）',meaning:'牙齒'},
+        {jp:'指',ro:'ゆび（指）',meaning:'手指'},
+        {jp:'皮膚',ro:'ひふ（皮膚）',meaning:'皮膚'},
+        {jp:'骨',ro:'ほね（骨）',meaning:'骨頭'},
+      ]},
+    ]
+  },
+  {
+    id:36, phase:2, title:'N4 漢字②（101–200）', subtitle:'常用漢字中 100',
+    desc:'N4 必考漢字第 101–200 個，動作・時間・數量類。',
+    type:'vocab',
+    groups:[
+      { label:'動作動詞漢字', items:[
+        {jp:'走',ro:'はし-る・そう（走る・競走）',meaning:'跑'},
+        {jp:'泳',ro:'およ-ぐ・えい（泳ぐ・水泳）',meaning:'游泳'},
+        {jp:'飛',ro:'と-ぶ・ひ（飛ぶ・飛行機）',meaning:'飛'},
+        {jp:'落',ro:'お-ちる・らく（落ちる・落語）',meaning:'掉落'},
+        {jp:'笑',ro:'わら-う・しょう（笑う・苦笑）',meaning:'笑'},
+        {jp:'泣',ro:'な-く・きゅう（泣く）',meaning:'哭'},
+        {jp:'怒',ro:'おこ-る・ど（怒る・怒号）',meaning:'生氣'},
+        {jp:'押',ro:'お-す（押す）',meaning:'推'},
+        {jp:'引',ro:'ひ-く・いん（引く・引力）',meaning:'拉'},
+        {jp:'叩',ro:'たた-く（叩く）',meaning:'敲'},
+      ]},
+      { label:'時間・數量', items:[
+        {jp:'昔',ro:'むかし（昔）',meaning:'以前'},
+        {jp:'最近',ro:'さいきん（最近）',meaning:'最近'},
+        {jp:'将来',ro:'しょうらい（将来）',meaning:'將來'},
+        {jp:'以上',ro:'いじょう（〜以上）',meaning:'以上'},
+        {jp:'以下',ro:'いか（〜以下）',meaning:'以下'},
+        {jp:'半分',ro:'はんぶん（半分）',meaning:'一半'},
+        {jp:'倍',ro:'ばい（2倍）',meaning:'倍'},
+        {jp:'全部',ro:'ぜんぶ（全部）',meaning:'全部'},
+        {jp:'大体',ro:'だいたい（大体）',meaning:'大概'},
+      ]},
+      { label:'感情・狀態', items:[
+        {jp:'喜',ro:'よろこ-ぶ・き（喜ぶ・喜び）',meaning:'喜悅'},
+        {jp:'悲',ro:'かな-しい・ひ（悲しい・悲劇）',meaning:'悲傷'},
+        {jp:'痛',ro:'いた-い・つう（痛い・頭痛）',meaning:'痛'},
+        {jp:'苦',ro:'くる-しい・く（苦しい・苦労）',meaning:'苦'},
+        {jp:'楽',ro:'たの-しい・らく（楽しい・気楽）',meaning:'樂/輕鬆'},
+        {jp:'忙',ro:'いそが-しい（忙しい）',meaning:'忙碌'},
+        {jp:'暇',ro:'ひま（暇）',meaning:'空閒'},
+      ]},
+    ]
+  },
+  {
+    id:37, phase:2, title:'N4 漢字③（201–300）', subtitle:'常用漢字後 100',
+    desc:'N4 必考漢字第 201–300 個，社會・抽象概念類。',
+    type:'vocab',
+    groups:[
+      { label:'社會・制度', items:[
+        {jp:'政',ro:'まつりごと・せい（政治）',meaning:'政治'},
+        {jp:'選',ro:'えら-ぶ・せん（選ぶ・選挙）',meaning:'選'},
+        {jp:'法',ro:'ほう（法律・方法）',meaning:'法律/方法'},
+        {jp:'税',ro:'ぜい（税金・消費税）',meaning:'稅'},
+        {jp:'産',ro:'う-む・さん（産む・生産）',meaning:'生產'},
+        {jp:'貿',ro:'ぼう（貿易）',meaning:'貿易'},
+        {jp:'輸',ro:'ゆ（輸出・輸入）',meaning:'輸出入'},
+        {jp:'価',ro:'あたい・か（価格・物価）',meaning:'價格'},
+      ]},
+      { label:'抽象概念', items:[
+        {jp:'目的',ro:'もくてき（目的）',meaning:'目的'},
+        {jp:'原因',ro:'げんいん（原因）',meaning:'原因'},
+        {jp:'結果',ro:'けっか（結果）',meaning:'結果'},
+        {jp:'理由',ro:'りゆう（理由）',meaning:'理由'},
+        {jp:'意見',ro:'いけん（意見）',meaning:'意見'},
+        {jp:'問題',ro:'もんだい（問題）',meaning:'問題'},
+        {jp:'解決',ro:'かいけつ（解決）',meaning:'解決'},
+        {jp:'計画',ro:'けいかく（計画）',meaning:'計畫'},
+        {jp:'予定',ro:'よてい（予定）',meaning:'預定'},
+        {jp:'準備',ro:'じゅんび（準備）',meaning:'準備'},
+      ]},
+      { label:'形容詞・副詞', items:[
+        {jp:'詳しい',ro:'くわしい（詳しい）',meaning:'詳細的'},
+        {jp:'珍しい',ro:'めずらしい（珍しい）',meaning:'稀奇的'},
+        {jp:'複雑',ro:'ふくざつ（複雑）',meaning:'複雜'},
+        {jp:'単純',ro:'たんじゅん（単純）',meaning:'單純'},
+        {jp:'丁寧',ro:'ていねい（丁寧）',meaning:'有禮貌'},
+        {jp:'特別',ro:'とくべつ（特別）',meaning:'特別'},
+        {jp:'普通',ro:'ふつう（普通）',meaning:'普通'},
+        {jp:'必要',ro:'ひつよう（必要）',meaning:'必要'},
+      ]},
+    ]
+  },
+  {
+    id:38, phase:2, title:'情境對話①：職場・商務', subtitle:'',
+    desc:'職場環境中使用的常見用語與句型，敬語應用實例。',
+    type:'vocab',
+    groups:[
+      { label:'職場常用語', items:[
+        {jp:'お世話になります',ro:'おせわになります',meaning:'承蒙關照'},
+        {jp:'よろしくお願いします',ro:'よろしくおねがいします',meaning:'請多指教/麻煩您'},
+        {jp:'ご確認ください',ro:'ごかくにんください',meaning:'請確認'},
+        {jp:'承知しました',ro:'しょうちしました',meaning:'我明白了（正式）'},
+        {jp:'かしこまりました',ro:'kashikomarimashita',meaning:'遵命（最正式）'},
+        {jp:'お待ちください',ro:'おまちください',meaning:'請稍候'},
+        {jp:'申し訳ありません',ro:'もうしわけありません',meaning:'非常抱歉'},
+        {jp:'ご迷惑をおかけしました',ro:'ごめいわくをおかけしました',meaning:'造成您的困擾'},
+        {jp:'お疲れ様でした',ro:'おつかれさまでした',meaning:'辛苦了'},
+        {jp:'失礼します',ro:'しつれいします',meaning:'打擾了/失禮了'},
+      ]},
+      { label:'商務動詞', items:[
+        {jp:'確認する',ro:'かくにんする',meaning:'確認'},
+        {jp:'連絡する',ro:'れんらくする',meaning:'聯絡'},
+        {jp:'報告する',ro:'ほうこくする',meaning:'報告'},
+        {jp:'相談する',ro:'そうだんする',meaning:'商量'},
+        {jp:'提出する',ro:'ていしゅつする',meaning:'提交'},
+        {jp:'担当する',ro:'たんとうする',meaning:'負責'},
+        {jp:'参加する',ro:'さんかする',meaning:'參加'},
+        {jp:'説明する',ro:'せつめいする',meaning:'說明'},
+      ]},
+    ]
+  },
+  {
+    id:39, phase:2, title:'情境對話②：日常・學校', subtitle:'',
+    desc:'日常生活與學校場景的常用表達方式。',
+    type:'vocab',
+    groups:[
+      { label:'日常表達', items:[
+        {jp:'もう一度',ro:'もういちど',meaning:'再一次'},
+        {jp:'ゆっくり',ro:'yukkuri',meaning:'慢慢地'},
+        {jp:'はっきり',ro:'hakkiri',meaning:'清楚地'},
+        {jp:'どうぞ',ro:'dōzo',meaning:'請/不客氣'},
+        {jp:'どうも',ro:'dōmo',meaning:'謝謝（隨意）'},
+        {jp:'せっかく',ro:'sekkaku',meaning:'難得/特地'},
+        {jp:'なるほど',ro:'naruhodo',meaning:'原來如此'},
+        {jp:'それに',ro:'soreni',meaning:'而且'},
+        {jp:'しかも',ro:'shikamo',meaning:'況且/而且'},
+        {jp:'ところで',ro:'tokorode',meaning:'對了/說到這個'},
+      ]},
+      { label:'學校相關', items:[
+        {jp:'授業',ro:'じゅぎょう',meaning:'上課'},
+        {jp:'試験',ro:'しけん',meaning:'考試'},
+        {jp:'成績',ro:'せいせき',meaning:'成績'},
+        {jp:'卒業',ro:'そつぎょう',meaning:'畢業'},
+        {jp:'入学',ro:'にゅうがく',meaning:'入學'},
+        {jp:'宿題',ro:'しゅくだい',meaning:'作業'},
+        {jp:'予習',ro:'よしゅう',meaning:'預習'},
+        {jp:'復習',ro:'ふくしゅう',meaning:'複習'},
+        {jp:'発表',ro:'はっぴょう',meaning:'發表'},
+        {jp:'締め切り',ro:'しめきり',meaning:'截止日'},
+      ]},
+    ]
+  },
+  {
+    id:40, phase:2, title:'讀解①：文章常用語彙', subtitle:'',
+    desc:'閱讀 N4 程度文章時常見的語彙與轉折詞。',
+    type:'vocab',
+    groups:[
+      { label:'轉折接續詞', items:[
+        {jp:'しかし',ro:'shikashi',meaning:'但是'},
+        {jp:'ところが',ro:'tokoroga',meaning:'然而/可是（出乎意料）'},
+        {jp:'一方',ro:'いっぽう',meaning:'另一方面'},
+        {jp:'そのため',ro:'そのため',meaning:'因此'},
+        {jp:'したがって',ro:'したがって',meaning:'因此/所以'},
+        {jp:'つまり',ro:'tsumari',meaning:'也就是說'},
+        {jp:'例えば',ro:'たとえば',meaning:'舉例來說'},
+        {jp:'ただし',ro:'tadashi',meaning:'但是/不過（附加條件）'},
+        {jp:'もっとも',ro:'mottomo',meaning:'不過/但是'},
+        {jp:'要するに',ro:'ようするに',meaning:'總而言之'},
+      ]},
+      { label:'閱讀常見名詞', items:[
+        {jp:'割合',ro:'わりあい',meaning:'比例/比率'},
+        {jp:'傾向',ro:'けいこう',meaning:'傾向'},
+        {jp:'調査',ro:'ちょうさ',meaning:'調查'},
+        {jp:'研究',ro:'けんきゅう',meaning:'研究'},
+        {jp:'影響',ro:'えいきょう',meaning:'影響'},
+        {jp:'変化',ro:'へんか',meaning:'變化'},
+        {jp:'増加',ro:'ぞうか',meaning:'增加'},
+        {jp:'減少',ro:'げんしょう',meaning:'減少'},
+        {jp:'比較',ro:'ひかく',meaning:'比較'},
+        {jp:'特徴',ro:'とくちょう',meaning:'特徵'},
+      ]},
+    ]
+  },
+  {
+    id:41, phase:2, title:'讀解②：說明文・指示語', subtitle:'',
+    desc:'閱讀說明文時常見的句型與指示語用法。',
+    type:'vocab',
+    groups:[
+      { label:'指示語（こそあど）', items:[
+        {jp:'このような',ro:'このような',meaning:'像這樣的'},
+        {jp:'そのような',ro:'そのような',meaning:'像那樣的'},
+        {jp:'このため',ro:'このため',meaning:'因此/為此'},
+        {jp:'それゆえ',ro:'それゆえ',meaning:'因此（書面）'},
+        {jp:'こうして',ro:'こうして',meaning:'就這樣/於是'},
+        {jp:'そこで',ro:'そこで',meaning:'於是/因此'},
+      ]},
+      { label:'說明文常用表達', items:[
+        {jp:'〜によると',ro:'〜によると',meaning:'根據〜'},
+        {jp:'〜に対して',ro:'〜にたいして',meaning:'對於〜'},
+        {jp:'〜について',ro:'〜について',meaning:'關於〜'},
+        {jp:'〜によって',ro:'〜によって',meaning:'因〜/由〜'},
+        {jp:'〜として',ro:'〜として',meaning:'作為〜'},
+        {jp:'〜に関して',ro:'〜にかんして',meaning:'關於〜（正式）'},
+        {jp:'〜を通じて',ro:'〜をつうじて',meaning:'透過〜'},
+        {jp:'〜のもとで',ro:'〜のもとで',meaning:'在〜之下'},
+      ]},
+    ]
+  },
+  {
+    id:42, phase:2, title:'聽力①：常用句型與速讀', subtitle:'',
+    desc:'聽力測驗中常出現的句型、縮略語與對話模式。',
+    type:'vocab',
+    groups:[
+      { label:'日常對話縮略', items:[
+        {jp:'〜じゃないですか',ro:'〜じゃないですか',meaning:'不是…嗎（確認）'},
+        {jp:'〜でしょ',ro:'〜でしょ',meaning:'是吧（口語確認）'},
+        {jp:'〜んじゃない',ro:'〜んじゃない',meaning:'不是…嗎（口語）'},
+        {jp:'ちょっと待って',ro:'ちょっとまって',meaning:'等一下'},
+        {jp:'そうですね',ro:'そうですね',meaning:'是啊/確實'},
+        {jp:'それはちょっと…',ro:'それはちょっと…',meaning:'那個有點…（婉拒）'},
+        {jp:'よかった',ro:'よかった',meaning:'太好了'},
+        {jp:'大丈夫',ro:'だいじょうぶ',meaning:'沒關係/沒問題'},
+        {jp:'どうしたの',ro:'どうしたの',meaning:'怎麼了？'},
+        {jp:'何でもない',ro:'なんでもない',meaning:'沒什麼'},
+      ]},
+      { label:'聽力題型關鍵語', items:[
+        {jp:'どこで',ro:'どこで',meaning:'在哪裡（地點）'},
+        {jp:'いつ',ro:'いつ',meaning:'什麼時候'},
+        {jp:'なぜ',ro:'なぜ',meaning:'為什麼'},
+        {jp:'どのように',ro:'どのように',meaning:'如何/怎麼樣'},
+        {jp:'どちら',ro:'どちら',meaning:'哪一個（兩者選一）'},
+        {jp:'確かに',ro:'たしかに',meaning:'確實'},
+        {jp:'実は',ro:'じつは',meaning:'其實'},
+        {jp:'結局',ro:'けっきょく',meaning:'結果/最終'},
+      ]},
+    ]
+  },
+  {
+    id:43, phase:2, title:'聽力②：即時應答・電話語言', subtitle:'',
+    desc:'電話應對與即時應答中常用的固定表達。',
+    type:'vocab',
+    groups:[
+      { label:'電話用語', items:[
+        {jp:'もしもし',ro:'moshimoshi',meaning:'喂（接電話）'},
+        {jp:'〜でございます',ro:'〜でございます',meaning:'我是〜（正式自我介紹）'},
+        {jp:'少々お待ちください',ro:'しょうしょうおまちください',meaning:'請稍候'},
+        {jp:'ただいま外出中です',ro:'ただいまがいしゅつちゅうです',meaning:'目前外出中'},
+        {jp:'伝言をお願いできますか',ro:'でんごんをおねがいできますか',meaning:'能否留言？'},
+        {jp:'折り返しお電話します',ro:'おりかえしおでんわします',meaning:'我會回電'},
+      ]},
+      { label:'即時應答', items:[
+        {jp:'おめでとうございます',ro:'おめでとうございます',meaning:'恭喜'},
+        {jp:'お大事に',ro:'おだいじに',meaning:'請保重'},
+        {jp:'気をつけて',ro:'きをつけて',meaning:'請小心'},
+        {jp:'行ってきます',ro:'いってきます',meaning:'我出門了'},
+        {jp:'いってらっしゃい',ro:'いってらっしゃい',meaning:'慢走（送別）'},
+        {jp:'ただいま',ro:'ただいま',meaning:'我回來了'},
+        {jp:'お帰りなさい',ro:'おかえりなさい',meaning:'歡迎回來'},
+        {jp:'いただきます',ro:'いただきます',meaning:'我要開動了'},
+        {jp:'ごちそうさまでした',ro:'ごちそうさまでした',meaning:'謝謝款待'},
+      ]},
+    ]
+  },
+  {
+    id:44, phase:2, title:'第二階段複習①：單字・漢字測驗', subtitle:'',
+    desc:'複習第 31〜43 堂所有單字與漢字，進行綜合測驗。',
+    type:'review', groups:[]
+  },
+  {
+    id:45, phase:2, title:'第二階段複習②：綜合應用', subtitle:'',
+    desc:'文法＋單字綜合應用，模擬閱讀短文填空。',
+    type:'review', groups:[]
+  },
+
+  // ── PHASE 3: Mock Tests ───────────────────────────────────
+  {id:46, phase:3, title:'N4 模擬考①', subtitle:'文字語彙・文法', desc:'第一回全真模擬：文字語彙與文法各節。', type:'review', groups:[]},
+  {id:47, phase:3, title:'N4 模擬考②', subtitle:'讀解・聽解', desc:'第二回全真模擬：讀解與聽解各節。', type:'review', groups:[]},
+  {id:48, phase:3, title:'N4 模擬考③', subtitle:'完整全科', desc:'第三回完整模擬考，模擬真實考試時間。', type:'review', groups:[]},
+  {id:49, phase:3, title:'弱點專項補強', subtitle:'依分析結果針對複習', desc:'根據模擬考結果，針對個人弱點進行強化訓練。', type:'review', groups:[]},
+  {id:50, phase:3, title:'最終模擬考＋成果確認', subtitle:'考前最後衝刺', desc:'最終一次完整模擬，確認備考狀態，答題策略總整理。', type:'review', groups:[]},
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+  currentLesson: null,
+  currentTab: 'study',
+  fcIndex: 0, fcFlipped: false, fcItems: [],
+  quizItems: [], quizIndex: 0, quizScore: 0,
+  quizAnswered: false, quizCorrect: '',
+  progress: JSON.parse(localStorage.getItem('jp-n4-progress') || '{}')
+};
+
+function saveProgress() { localStorage.setItem('jp-n4-progress', JSON.stringify(state.progress)); }
+
+// ============================================================
+// HELPERS
+// ============================================================
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function getLessonItems(lesson) {
+  if (!lesson) return [];
+  if (lesson.type === 'grammar') {
+    return (lesson.items || []).map(it => ({
+      front: it.front, back: it.back, meaning: it.meaning || it.back,
+      example: it.example, translation: it.translation
+    }));
+  }
+  if (lesson.type === 'vocab') {
+    const items = [];
+    (lesson.groups || []).forEach(g => g.items.forEach(v => {
+      items.push({ front: v.jp, back: v.ro, meaning: v.meaning });
+    }));
+    return items;
+  }
+  if (lesson.type === 'review') {
+    const phase = lesson.phase;
+    const sourceIds = phase === 3
+      ? LESSONS.filter(l => l.id < lesson.id && l.type !== 'review').map(l => l.id)
+      : LESSONS.filter(l => l.id < lesson.id && l.phase === phase && l.type !== 'review').map(l => l.id);
+    const items = [];
+    sourceIds.forEach(id => {
+      const src = LESSONS.find(l => l.id === id);
+      if (src) items.push(...getLessonItems(src).slice(0, 5));
+    });
+    return shuffle([...items]);
+  }
+  return [];
+}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function renderSidebar() {
+  const list = document.getElementById('lesson-list');
+  const phases = [
+    { id: 1, label: '第一階段：N4 核心文法', cls: 'p1', range: [1, 30] },
+    { id: 2, label: '第二階段：單字・漢字・應用', cls: 'p2', range: [31, 45] },
+    { id: 3, label: '第三階段：模擬考衝刺', cls: 'p3', range: [46, 50] },
+  ];
+  let html = '';
+  phases.forEach(ph => {
+    html += `<div class="phase-label ${ph.cls}">${ph.label}</div>`;
+    LESSONS.filter(l => l.phase === ph.id).forEach(l => {
+      const done = state.progress[l.id];
+      const active = state.currentLesson && state.currentLesson.id === l.id;
+      html += `<button class="lesson-btn${done ? ' done' : ''}${active ? ' active' : ''}" onclick="loadLesson(${l.id})">
+        <div class="num">${done ? '✓' : l.id}</div>
+        <div class="info"><div class="t">${l.title}</div><div class="s">${l.subtitle}</div></div>
+      </button>`;
+    });
+  });
+  list.innerHTML = html;
+  const done = Object.keys(state.progress).length;
+  document.getElementById('progress-text').textContent = `${done} / 50 堂`;
+  document.getElementById('progress-bar-fill').style.width = `${done * 2}%`;
+}
+
+// ============================================================
+// LOAD LESSON
+// ============================================================
+function loadLesson(id) {
+  state.currentLesson = LESSONS.find(l => l.id === id);
+  state.currentTab = 'study';
+  state.fcIndex = 0; state.fcFlipped = false;
+  const l = state.currentLesson;
+  const phaseLabel = l.phase === 1 ? '第一階段・文法' : l.phase === 2 ? '第二階段・單字漢字' : '第三階段・模擬考';
+  document.querySelector('#lesson-header .phase').textContent = phaseLabel;
+  document.getElementById('lesson-title').innerHTML =
+    `第 ${id} 堂　${l.title}` + (state.progress[id] ? ' <span class="done-badge">✓ 完成</span>' : '');
+  document.getElementById('lesson-subtitle').textContent = l.desc;
+  document.getElementById('tab-bar').style.display = '';
+  renderStudy();
+  document.getElementById('flashcard-view').style.display = 'none';
+  document.getElementById('quiz-view').style.display = 'none';
+  document.getElementById('study-view').style.display = '';
+  setActiveTab('study');
+  renderSidebar();
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(tab) {
+  state.currentTab = tab;
+  setActiveTab(tab);
+  document.getElementById('study-view').style.display = tab === 'study' ? '' : 'none';
+  document.getElementById('flashcard-view').style.display = tab === 'flashcard' ? '' : 'none';
+  document.getElementById('quiz-view').style.display = tab === 'quiz' ? '' : 'none';
+  if (tab === 'flashcard') renderFlashcard();
+  if (tab === 'quiz') startQuiz();
+}
+
+function setActiveTab(tab) {
+  const tabs = ['study', 'flashcard', 'quiz'];
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', tabs[i] === tab));
+}
+
+// ============================================================
+// STUDY MODE
+// ============================================================
+function renderStudy() {
+  const l = state.currentLesson;
+  let html = '';
+
+  if (l.type === 'grammar') {
+    if (l.notes) html += `<div class="rule-box"><h4>📌 學習要點</h4><p>${l.notes}</p></div>`;
+    html += '<div class="section-label">句型詳解（點擊聆聽）</div>';
+    (l.items || []).forEach(it => {
+      html += `<div class="grammar-card" data-speak="${it.front}" onclick="speak(this.dataset.speak)">
+        <div class="pattern">${it.front}</div>
+        <div class="meaning">${it.meaning || it.back}</div>
+        <div class="example" data-speak="${it.example}" onclick="event.stopPropagation();speak(this.dataset.speak)" title="點擊朗讀例句">
+          <div class="jp">例：${it.example}</div>
+          <div class="tr">${it.translation}</div>
+        </div>
+      </div>`;
+    });
+  }
+  else if (l.type === 'vocab') {
+    (l.groups || []).forEach(g => {
+      html += `<div class="section-label">${g.label}</div><div class="vocab-grid">`;
+      g.items.forEach(v => {
+        html += `<div class="vocab-card" data-speak="${v.jp}" onclick="speak(this.dataset.speak)">
+          <div class="jp">🔊 ${v.jp}</div>
+          <div class="reading">${v.ro}</div>
+          <div class="meaning">${v.meaning}</div>
+        </div>`;
+      });
+      html += '</div>';
+    });
+  }
+  else if (l.type === 'review') {
+    const phaseNames = {1:'文法句型', 2:'單字・漢字', 3:'全科'};
+    html += `<div class="rule-box">
+      <h4>🎯 複習目標</h4>
+      <p>本堂課綜合測驗前面所有課程內容（${phaseNames[l.phase] || '全科'}）。</p>
+      <p style="margin-top:6px">建議先點「單字卡」快速瀏覽，再挑戰「測驗」！</p>
+    </div>`;
+    const sourceIds = l.phase === 3
+      ? LESSONS.filter(x => x.id < l.id && x.type !== 'review').map(x => x.id)
+      : LESSONS.filter(x => x.id < l.id && x.phase === l.phase && x.type !== 'review').map(x => x.id);
+    html += '<div class="section-label">包含課程</div>';
+    sourceIds.forEach(id => {
+      const src = LESSONS.find(x => x.id === id);
+      const done = state.progress[id];
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+        <span style="font-size:14px">${done ? '✅' : '⬜'}</span>
+        <div>
+          <div style="font-size:12px;font-weight:600">第${id}堂 ${src.title}</div>
+          <div style="font-size:11px;color:var(--muted)">${src.subtitle}</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('study-view').innerHTML = html;
+}
+
+// ============================================================
+// FLASHCARD
+// ============================================================
+function renderFlashcard() {
+  state.fcItems = shuffle([...getLessonItems(state.currentLesson)]);
+  state.fcIndex = 0; state.fcFlipped = false;
+  renderFcCard();
+}
+
+function renderFcCard() {
+  const items = state.fcItems;
+  if (!items.length) {
+    document.getElementById('flashcard-view').innerHTML = '<p style="text-align:center;color:var(--muted);padding:40px">本堂課尚無單字卡內容</p>';
+    return;
+  }
+  const idx = state.fcIndex;
+  const item = items[idx];
+  document.getElementById('flashcard-view').innerHTML = `
+    <div id="fc-progress">${idx + 1} / ${items.length}</div>
+    <div id="fc-card-wrap" onclick="flipCard()">
+      <div id="fc-inner">
+        <div class="fc-face" id="fc-front">
+          <div class="char">${item.front}</div>
+          <div class="hint">點擊翻面查看答案</div>
+        </div>
+        <div class="fc-face" id="fc-back">
+          <div class="reading">${item.back}</div>
+          ${item.meaning && item.meaning !== item.back ? `<div class="meaning">${item.meaning}</div>` : ''}
+          ${item.example ? `<div class="example">${item.example}<br><span style="color:#bbb">${item.translation||''}</span></div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div id="fc-controls">
+      <button class="fc-btn" onclick="fcNav(-1)" ${idx===0?'disabled style="opacity:.4"':''}>← 上一張</button>
+      <button class="fc-btn primary" onclick="fcNav(1)">${idx===items.length-1?'完成 🎉':'下一張 →'}</button>
+    </div>
+    <button id="fc-shuffle-btn" onclick="fcShuffle()">🔀 隨機排列</button>
+  `;
+  if (state.fcFlipped) document.getElementById('fc-inner').classList.add('flipped');
+}
+
+function flipCard() {
+  state.fcFlipped = !state.fcFlipped;
+  const inner = document.getElementById('fc-inner');
+  if (inner) inner.classList.toggle('flipped', state.fcFlipped);
+  if (state.fcFlipped) {
+    const item = state.fcItems[state.fcIndex];
+    if (item) speak(item.front);
+  }
+}
+
+function fcNav(dir) {
+  const total = state.fcItems.length;
+  state.fcIndex = Math.max(0, Math.min(total - 1, state.fcIndex + dir));
+  state.fcFlipped = false;
+  if (dir === 1 && state.fcIndex === total - 1) markDone();
+  renderFcCard();
+}
+
+function fcShuffle() {
+  state.fcItems = shuffle([...state.fcItems]);
+  state.fcIndex = 0; state.fcFlipped = false;
+  renderFcCard();
+}
+
+// ============================================================
+// QUIZ
+// ============================================================
+function startQuiz() {
+  const all = getLessonItems(state.currentLesson);
+  if (!all.length) {
+    document.getElementById('quiz-view').innerHTML = '<p style="text-align:center;color:var(--muted);padding:40px">本堂課尚無測驗題目</p>';
+    return;
+  }
+  state.quizItems = shuffle([...all]).slice(0, Math.min(10, all.length));
+  state.quizIndex = 0; state.quizScore = 0; state.quizAnswered = false;
+  renderQuizQ();
+}
+
+function renderQuizQ() {
+  const items = state.quizItems;
+  const idx = state.quizIndex;
+  if (idx >= items.length) { renderQuizResult(); return; }
+
+  const q = items[idx];
+  const total = items.length;
+  const isVocab = !!q.meaning;
+  const getKey = it => isVocab ? it.meaning : it.back;
+
+  const allItems = getLessonItems(state.currentLesson);
+  const usedKeys = new Set([getKey(q)]);
+  const others = shuffle(allItems.filter(i => {
+    const k = getKey(i);
+    if (usedKeys.has(k)) return false;
+    usedKeys.add(k); return true;
+  })).slice(0, 3);
+  const options = shuffle([q, ...others]);
+
+  state.quizCorrect = getKey(q);
+  const questionText = isVocab ? '以下字/句型的意思是？' : '以下字/詞的讀音是？';
+  const pct = (idx / total) * 100;
+
+  document.getElementById('quiz-view').innerHTML = `
+    <div id="quiz-progress-wrap">
+      <div id="quiz-progress-bar-bg"><div id="quiz-progress-bar-fill" style="width:${pct}%"></div></div>
+      <span id="quiz-q-num">${idx + 1} / ${total}</span>
+    </div>
+    <div id="quiz-question">${questionText}</div>
+    <div id="quiz-question-char">${q.front}</div>
+    <div class="quiz-options" id="quiz-options"></div>
+    <div id="quiz-feedback"></div>
+    <button id="quiz-next-btn" onclick="nextQuiz()" style="display:none">繼續 →</button>
+  `;
+  state.quizAnswered = false;
+
+  const container = document.getElementById('quiz-options');
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.dataset.value = getKey(opt);
+    btn.textContent = getKey(opt);
+    btn.addEventListener('click', () => answerQuiz(btn));
+    container.appendChild(btn);
+  });
+}
+
+function answerQuiz(clickedBtn) {
+  if (state.quizAnswered) return;
+  state.quizAnswered = true;
+  const chosen = clickedBtn.dataset.value;
+  const correct = state.quizCorrect;
+  const isCorrect = chosen === correct;
+
+  document.querySelectorAll('.quiz-option').forEach(btn => {
+    btn.disabled = true;
+    if (btn.dataset.value === correct) btn.classList.add('correct');
+    else if (btn === clickedBtn) btn.classList.add('wrong');
+  });
+
+  if (isCorrect) {
+    state.quizScore++;
+    document.getElementById('quiz-feedback').innerHTML =
+      '<span style="color:var(--green);font-weight:700">✓ 正確！</span>';
+    const q = state.quizItems[state.quizIndex];
+    speak(q.front);
+    setTimeout(() => nextQuiz(), 1400);
+  } else {
+    document.getElementById('quiz-feedback').innerHTML =
+      `<span style="color:var(--accent);font-weight:700">✗ 正確答案是「${correct}」</span>`;
+    document.getElementById('quiz-next-btn').style.display = 'block';
+  }
+}
+
+function nextQuiz() {
+  state.quizIndex++;
+  state.quizAnswered = false;
+  renderQuizQ();
+}
+
+function renderQuizResult() {
+  const score = state.quizScore;
+  const total = state.quizItems.length;
+  const pct = Math.round((score / total) * 100);
+  const pass = pct >= 70;
+  if (pass) markDone();
+  const msg = pct===100?'完美！全部答對 🎉':pct>=80?'非常好！繼續加油！':pct>=60?'還不錯，再複習一下！':'繼續努力，多練習單字卡！';
+
+  document.getElementById('quiz-view').innerHTML = `
+    <div id="quiz-result">
+      <div class="score-circle">
+        <div class="score-num">${score}/${total}</div>
+        <div class="score-label">答對題數</div>
+      </div>
+      <h3>${msg}</h3>
+      <p>得分率 ${pct}%${pass?'　<span class="done-badge">✓ 通過</span>':''}</p>
+      <div class="btn-row">
+        <button class="fc-btn" onclick="startQuiz()">🔁 再測一次</button>
+        <button class="fc-btn primary" onclick="switchTab('flashcard')">🃏 複習單字卡</button>
+      </div>
+    </div>
+  `;
+}
+
+function markDone() {
+  if (!state.progress[state.currentLesson.id]) {
+    state.progress[state.currentLesson.id] = true;
+    saveProgress();
+    document.getElementById('lesson-title').innerHTML =
+      `第 ${state.currentLesson.id} 堂　${state.currentLesson.title} <span class="done-badge">✓ 完成</span>`;
+    renderSidebar();
+  }
+}
+
+// ============================================================
+// KEYBOARD
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (state.currentTab === 'flashcard') {
+    if (e.key === 'ArrowRight' || e.key === 'l') fcNav(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'h') fcNav(-1);
+    if (e.key === ' ') { e.preventDefault(); flipCard(); }
+  }
+  if (state.currentTab === 'quiz' && state.quizAnswered && e.key === 'Enter') nextQuiz();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+renderSidebar();
+const first = LESSONS.find(l => !state.progress[l.id]) || LESSONS[0];
+loadLesson(first.id);
+</script>
+</body>
+</html>
