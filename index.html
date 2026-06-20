@@ -122,7 +122,7 @@
   #quiz-result .btn-row { display:flex; gap:10px; justify-content:center; }
   .done-badge { display:inline-flex; align-items:center; gap:4px; background:#edf7f3; border:1px solid #b2deca; color:var(--green); font-size:11px; font-weight:700; padding:2px 9px; border-radius:99px; margin-left:8px; vertical-align:middle; }
 </style>
-<script src="https://code.responsivevoice.org/responsivevoice.js?key=FREE" defer></script>
+<script src="https://code.responsivevoice.org/responsivevoice.js?key=FREE"></script>
 </head>
 <body>
 
@@ -166,20 +166,20 @@ function _loadJaVoice() {
 if (window.speechSynthesis) { speechSynthesis.addEventListener('voiceschanged', _loadJaVoice); _loadJaVoice(); }
 function speak(text) {
   if (!text) return;
+  // 優先用 ResponsiveVoice（跨平台日文語音，不依賴 OS 語音包）
+  if (window.responsiveVoice) {
+    responsiveVoice.speak(text, 'Japanese Female', { rate: 0.85 });
+    return;
+  }
+  // 備援：Web Speech API，必須找到日文語音才說，否則不發音
   if (window.speechSynthesis) {
+    if (!_jaVoice) _loadJaVoice();
+    if (!_jaVoice) return; // 沒有日文語音，靜默（避免說中文）
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ja-JP'; u.rate = 0.85;
-    if (!_jaVoice) _loadJaVoice();
-    if (_jaVoice) u.voice = _jaVoice;
-    u.onerror = () => _rvSpeak(text);
+    u.lang = 'ja-JP'; u.rate = 0.85; u.voice = _jaVoice;
     speechSynthesis.speak(u);
-  } else {
-    _rvSpeak(text);
   }
-}
-function _rvSpeak(text) {
-  if (window.responsiveVoice) responsiveVoice.speak(text, 'Japanese Female', { rate: 0.9 });
 }
 
 // ============================================================
